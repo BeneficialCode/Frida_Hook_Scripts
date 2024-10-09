@@ -1,2 +1,3 @@
 venv
 frida-server-16.4.3-android-arm64
+*.o
