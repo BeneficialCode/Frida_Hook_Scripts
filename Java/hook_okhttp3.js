@@ -1,12 +1,5 @@
-function hook_okhttp3() {
+export function hook_okhttp3() {
     Java.perform(function() {
-        let SocketSecureCell = Java.use("com.dianping.nvnetwork.tunnel.Encrypt.SocketSecureCell");
-        SocketSecureCell["isSocketConnected"].implementation = function () {
-            console.log(`SocketSecureCell.isSocketConnected is called`);
-            let result = this["isSocketConnected"]();
-            console.log(`SocketSecureCell.isSocketConnected result=${result}`);
-            return result;
-        };
         var ByteString = Java.use("com.android.okhttp.okio.ByteString");
         var Buffer = Java.use('okio.Buffer');         
         var Interceptor = Java.use("okhttp3.Interceptor");

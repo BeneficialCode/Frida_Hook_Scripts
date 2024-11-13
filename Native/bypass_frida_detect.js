@@ -14,6 +14,9 @@ export function replace_str() {
                 str2.indexOf("pool-frida") !== -1||
                 str2.indexOf("linjector") !== -1) {
                 console.log("strstr-->", str1, str2);
+                if(str2 == "re.frida.server"){
+                    this.hook = false;
+                }
                 this.hook = true;
             }
         }, onLeave: function (retval) {
@@ -27,10 +30,7 @@ export function replace_str() {
         onEnter: function (args) {
             var str1 = args[0].readCString();
             var str2 = args[1].readCString();
-            if(str1.indexOf("_frida.js")!== -1){
-                this.hook = false;
-            }
-            else if (str2.indexOf("tmp") !== -1 ||
+            if (str2.indexOf("tmp") !== -1 ||
                 str2.indexOf("frida") !== -1 ||
                 str2.indexOf("gum-js-loop") !== -1 ||
                 str2.indexOf("gmain") !== -1 ||
