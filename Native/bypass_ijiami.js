@@ -124,8 +124,8 @@ export function hook_fopen() {
         onEnter: function(args) {
             let path = args[0].readCString();
             let mode = args[1].readCString();
-            console.log("fopen path:", path);
-            console.log("fopen mode:", mode);
+            // console.log("fopen path:", path);
+            // console.log("fopen mode:", mode);
         }
     });
 }
