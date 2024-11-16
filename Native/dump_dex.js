@@ -47,14 +47,14 @@ function chmod(path) {
 }
 
 
-function dump_dex() {
+function hook_DefineClass() {
     var libart = Process.findModuleByName("libart.so");
     var p_DefineClass = null;
     var symbols = libart.enumerateSymbols();
     for(var idx = 0;idx < symbols.length;idx++){
         var symbol = symbols[idx];
         var symbol_name = symbol.name;
-        // Android 11 
+        // Android 13
         // art::ClassLinker::DefineClass(art::Thread*, char const*, unsigned long, art::Handle<art::mirror::ClassLoader>, art::DexFile const&, art::dex::ClassDef const&)
         // _ZN3art11ClassLinker11DefineClassEPNS_6ThreadEPKcmNS_6HandleINS_6mirror11ClassLoaderEEERKNS_7DexFileERKNS_3dex8ClassDefE
         // Android 9 art::ClassLinker::DefineClass(art::Thread*, char const*, unsigned long, art::Handle<art::mirror::ClassLoader>, art::DexFile const&, art::DexFile::ClassDef const&)
@@ -104,7 +104,7 @@ function dump_dex() {
 
 var is_hook_libart = false;
 
-export function hook_DefineClass() {
+export function dump_dex() {
     var addr_dlopen = Module.getExportByName(null, "dlopen");
     Interceptor.attach(addr_dlopen, {
         onEnter: function(args) {
@@ -117,9 +117,66 @@ export function hook_DefineClass() {
         },
         onLeave: function(retval) {
             if(this.can_hook_libart && !is_hook_libart) {
-                dump_dex();
+                // hook_DefineClass();
+                hook_LoadMethod();
                 is_hook_libart = true;
             }
         }
     });
+}
+
+export function hook_LoadMethod() {
+    console.log("hook_LoadMethod");
+    var libart = Process.findModuleByName("libart.so");
+    var p_LoadMethod = null;
+    var symbols = libart.enumerateSymbols();
+    for(var idx = 0;idx < symbols.length;idx++){
+        var symbol = symbols[idx];
+        var symbol_name = symbol.name;
+        // Android 13
+        // _ZN3art11ClassLinker10LoadMethodERKNS_7DexFileERKNS_13ClassAccessor6MethodENS_6ObjPtrINS_6mirror5ClassEEEPNS_9ArtMethodE
+        // art::ClassLinker::LoadMethod(int, int, int, int, art::ArtMethod *this)
+        if(symbol_name.indexOf("ClassLinker")>=0 && symbol_name.indexOf("LoadMethod")>=0 &&
+            symbol_name.indexOf("ClassAccessor")>=0 && symbol_name.indexOf("DexFile")>=0){
+            console.log(symbol_name,symbol.address);
+            p_LoadMethod = symbol.address;
+        }
+    }
+
+    var dex_maps = {};
+
+    if(p_LoadMethod){
+        Interceptor.attach(p_LoadMethod,{
+            onEnter: function(args) {
+                // console.log("LoadMethod...");
+                this.dex_file = args[1];
+            },
+            onLeave: function(retval) {
+                var base = ptr(this.dex_file).add(Process.pointerSize).readPointer();
+                var size = ptr(this.dex_file).add(Process.pointerSize*2).readUInt();
+                console.log(hexdump(base, {length:16,ansi:true}));
+                if(dex_maps[base] == undefined) {
+                    dex_maps[base] = size;
+                    var magic = ptr(base).readCString();
+                    console.log("magic:", magic);
+                    if(magic.indexOf("dex") == 0) {
+                        var process_name = get_self_process_name();
+                        if(process_name != null) {
+                            var dex_dir_path = "/data/data/" + process_name + "/files/dump_dex_" + process_name;
+                            mkdir(dex_dir_path);
+                            var dex_path = dex_dir_path + "/class_" + base + "_" + size + ".dex";
+                            console.log("dump dex : " + dex_path);
+                            var fd = new File(dex_path, "wb");
+                            if(fd){
+                                var dex_buffer = ptr(base).readByteArray(size);
+                                fd.write(dex_buffer);
+                                fd.flush();
+                                fd.close();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 }

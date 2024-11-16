@@ -4,7 +4,7 @@ import {hook_okhttp3} from "./Java/hook_okhttp3.js";
 import {replace_str} from "./Native/bypass_frida_detect.js";
 import {hook_fopen} from "./Native/bypass_ijiami.js";
 import {hook_network } from "./Java/hook_network_detect.js";
-import { hook_DefineClass } from "./Native/dump_dex.js";
+import { dump_dex } from "./Native/dump_dex.js";
 
 
 function main() {
@@ -18,7 +18,7 @@ function main() {
     hook_fopen();
     hook_fgets();
     hook_network();
-    hook_DefineClass();
+    dump_dex();
     //hook_okhttp3();
 }
 
